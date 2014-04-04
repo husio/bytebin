@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+
+{% block head -%}
+<style type="text/css">
+    html, body  { margin: 0; padding: 5px; }
+    textarea    { padding: 10px; border: none;}
+</style>
+{%- endblock %}
+
+
+{% block body -%}
+    <form action="/" method="POST" accept-charset="utf-8">
+        <textarea name="data" cols="80" rows="30" placeholder="Content..." required></textarea>
+        <hr>
+        <button type="submit">Submit</button>
+    </form>
+{%- endblock %}
