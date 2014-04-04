@@ -39,6 +39,11 @@ def create_page():
         if app.redis.set(key, data, nx=True, ex=timeout):
             break
 
+    # context negotiation does not work well here
+    if flask.request.headers.get('user-agent').startswith('curl'):
+        url = 'http://{}/{}\n'.format(flask.request.host, key)
+        return flask.Response(url, content_type='text/plain; charset=utf-8')
+
     return flask.render_template('set_success.html', key=key)
 
 
