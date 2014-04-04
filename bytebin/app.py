@@ -1,3 +1,4 @@
+import os
 import uuid
 
 import flask
@@ -75,4 +76,4 @@ def change_page(key):
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=bool(os.getenv('DEBUG', False)))
