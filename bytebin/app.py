@@ -2,6 +2,10 @@ import uuid
 
 import flask
 import redis
+import pygments
+from pygments import highlight
+from pygments.formatters import HtmlFormatter
+from pygments.lexers import get_lexer_by_name
 
 
 app = flask.Flask(__name__)
@@ -39,7 +43,24 @@ def fetch_page(key):
     data = app.redis.get(key)
     if data is None:
         flask.abort(404)
-    return data
+
+    lexer_name = flask.request.args.get('lang', None)
+    if not lexer_name:
+        return flask.Response(data, content_type='text/plain; charset=utf-8')
+
+    try:
+        lexer = get_lexer_by_name(lexer_name, stripall=True)
+    except pygments.util.ClassNotFound:
+        return 'language "{}" not supported'.format(lexer_name), 400
+
+    with_lines = 'nonu' not in flask.request.args
+
+    formatter = HtmlFormatter(linenos=with_lines, cssclass="source")
+    html = highlight(data, lexer, formatter)
+    stylename = 'css/pygments/{}.css'.format(
+            flask.request.args.get('style', 'tango'))
+    return flask.render_template('source_code.html', html=html,
+                                 stylename=stylename)
 
 
 @app.route("/<key>", methods=["PUT"])
