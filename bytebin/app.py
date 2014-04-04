@@ -14,6 +14,7 @@ from pygments.lexers import get_lexer_by_name
 app = flask.Flask(__name__)
 app.redis = redis.Redis()
 app.debug = bool(os.getenv('DEBUG', False))
+log = logging.getLogger(__name__)
 
 
 @app.route("/", methods=["GET"])
@@ -38,6 +39,8 @@ def create_page():
         key = str(uuid.uuid4())
         if app.redis.set(key, data, nx=True, ex=timeout):
             break
+
+    log.debug('page created: %s', flask.request.remote_addr)
 
     # context negotiation does not work well here
     if flask.request.headers.get('user-agent').startswith('curl'):
@@ -79,6 +82,7 @@ def change_page(key):
         flask.abort(400)
     if not app.redis.set(key, data, xx=True):
         flask.abort(404)
+    log.debug('page changed: %s', flask.request.remote_addr)
     return flask.render_template('set_success.html', key=key)
 
 
