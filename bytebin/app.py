@@ -1,3 +1,5 @@
+import logging
+import logging.handlers
 import os
 import uuid
 
@@ -11,6 +13,7 @@ from pygments.lexers import get_lexer_by_name
 
 app = flask.Flask(__name__)
 app.redis = redis.Redis()
+app.debug = bool(os.getenv('DEBUG', False))
 
 
 @app.route("/", methods=["GET"])
@@ -74,6 +77,19 @@ def change_page(key):
     return flask.render_template('set_success.html', key=key)
 
 
+# setup syslog looger
+if not app.debug:
+    logger = logging.getLogger('root')
+    logger.setLevel(logging.DEBUG)
+    if os.sys.platform == 'darwin':
+        handler = logging.handlers.SysLogHandler(address='/var/run/syslog')
+    else:
+        handler = logging.handlers.SysLogHandler(address='/dev/log')
+    formatter = logging.Formatter(
+            'bytebin.%(name)s %(asctime)s %(levelname)8s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
 
 if __name__ == "__main__":
-    app.run(debug=bool(os.getenv('DEBUG', False)))
+    app.run()
