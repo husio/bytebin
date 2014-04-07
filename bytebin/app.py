@@ -34,6 +34,9 @@ def create_page():
         return 'invalid "timeout" value', 400
     if timeout < 1:
         return 'timeout has to be greater than 0', 400
+    elif timeout > 60 * 60 * 24 * 2:
+        return 'timeout has to be smalled than 2 days', 400
+
 
     while True:
         key = str(uuid.uuid4())

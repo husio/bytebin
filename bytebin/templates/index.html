@@ -13,6 +13,10 @@
     <form action="/" method="POST" accept-charset="utf-8">
         <textarea name="data" cols="80" rows="30" placeholder="Content..." required></textarea>
         <hr>
+        <label>
+            Timeout (in minutes)
+            <input type="number" min="60" max="172800" step="60" value="360" name="timeout" required>
+        </label>
         <button type="submit">Submit</button>
     </form>
     <p>
