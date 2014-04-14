@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+
+{% block body -%}
+    <p>
+        To upload file from console:
+        <pre>
+            <code>cat &lt;file&gt; | curl -F 'data=&lt;-' http://{{ request.host }}</code>
+        </pre>
+    </p>
+{%- endblock %}

@@ -1,109 +1,126 @@
-import logging
-import logging.handlers
+import difflib
 import os
-import uuid
 
 import flask
-import redis
+from redis import Redis
 import pygments
 from pygments import highlight
 from pygments.formatters import HtmlFormatter
 from pygments.lexers import get_lexer_by_name
 
+from models import Paste
+
 
 app = flask.Flask(__name__)
-app.redis = redis.Redis()
 app.debug = bool(os.getenv('DEBUG', False))
-log = logging.getLogger(__name__)
+redis = Redis(db=int(os.getenv('REDIS_DATABSE', 3)))
+Paste.set_connection(redis)
 
 
 @app.route("/", methods=["GET"])
-def index():
-    return flask.render_template('index.html')
+def paste_form():
+    return flask.render_template('create_form.html')
+
+
+@app.route("/help", methods=["GET"])
+def help():
+    return flask.render_template('help.html')
 
 
 @app.route("/", methods=["POST"])
-def create_page():
-    data = flask.request.form.get('data', None)
-    if not data:
+def pate_create():
+    content = flask.request.form.get('content', None)
+    if not content:
         flask.abort(400)
 
     try:
-        timeout = int(flask.request.form.get('timeout', 60 * 60))
+        timeout = int(flask.request.form.get('timeout', 60))
     except (ValueError, TypeError):
         return 'invalid "timeout" value', 400
     if timeout < 1:
         return 'timeout has to be greater than 0', 400
 
     # convert to minutes
-    timeout *= 60
     if timeout > 60 * 60 * 24 * 2:
-        return 'timeout has to be smalled than 2 days', 400
+        return 'timeout has to be smaller than 2 days', 400
 
+    paste = Paste(content=content)
+    paste.save(timeout)
 
-    while True:
-        key = str(uuid.uuid4())
-        if app.redis.set(key, data, nx=True, ex=timeout):
-            break
-
-    log.debug('page created: %s', flask.request.remote_addr)
+    app.logger.info('page created by %s, size %s', flask.request.remote_addr,
+                    len(paste.content))
 
     # context negotiation does not work well here
-    if flask.request.headers.get('user-agent').startswith('curl'):
-        url = 'http://{}/{}\n'.format(flask.request.host, key)
+    user_agent = flask.request.headers.get('user-agent')
+    if user_agent and user_agent.startswith('curl'):
+        url = 'http://{}/{}\n'.format(flask.request.host, paste.key)
         return flask.Response(url, content_type='text/plain; charset=utf-8')
 
-    return flask.render_template('set_success.html', key=key)
+    return flask.redirect(flask.url_for('.paste_show', key=paste.key))
 
 
-@app.route("/<key>", methods=["GET"])
-def fetch_page(key):
-    data = app.redis.get(key)
-    if data is None:
-        flask.abort(404)
+@app.route("/<key_1>/diff/<key_2>", methods=["GET"])
+def paste_diff(key_1, key_2):
+    keys = [key_1, key_2]
+    values = app.redis.mget([key_1, key_2])
+    for key, value in zip(keys, values):
+        if not value:
+            return "Value is missing: {}".format(key), 404
+    values = [v.decode('utf8').split('\n') for v in values]
+    diff = difflib.unified_diff(*values)
+    content = "\n".join(diff)
+    if False:
+        return flask.Response(content, content_type='text/plain; charset=utf-8')
 
-    lexer_name = flask.request.args.get('lang', None)
-    if not lexer_name:
-        return flask.Response(data, content_type='text/plain; charset=utf-8')
-
-    try:
-        lexer = get_lexer_by_name(lexer_name, stripall=True)
-    except pygments.util.ClassNotFound:
-        return 'language "{}" not supported'.format(lexer_name), 400
-
-    with_lines = 'nonu' not in flask.request.args
-
-    formatter = HtmlFormatter(linenos=with_lines, cssclass="source")
-    html = highlight(data, lexer, formatter)
+    lexer = get_lexer_by_name('diff', stripall=True)
+    formatter = HtmlFormatter(linenos=False, cssclass="source")
+    html = highlight(content, lexer, formatter)
     stylename = 'css/pygments/{}.css'.format(
             flask.request.args.get('style', 'tango'))
     return flask.render_template('source_code.html', html=html,
                                  stylename=stylename)
 
 
-@app.route("/<key>", methods=["PUT"])
-def change_page(key):
-    data = flask.request.form.get('data', None)
-    if not data:
-        flask.abort(400)
-    if not app.redis.set(key, data, xx=True):
+@app.route("/<key>", methods=["GET"])
+def paste_show(key):
+    try:
+        paste = Paste.find(key)
+    except Paste.NotFound:
         flask.abort(404)
-    log.debug('page changed: %s', flask.request.remote_addr)
-    return flask.render_template('set_success.html', key=key)
+
+    lexer_name = flask.request.args.get('lang', None)
+    if not lexer_name:
+        return flask.Response(paste.content,
+                              content_type='text/plain; charset=utf-8')
+
+    try:
+        lexer = get_lexer_by_name(lexer_name, stripall=True)
+    except pygments.util.ClassNotFound:
+        return 'language "{}" not supported'.format(lexer_name), 400
+
+    with_lines = 'lineno' in flask.request.args
+
+    formatter = HtmlFormatter(linenos=with_lines, cssclass="source")
+    html = highlight(paste.content, lexer, formatter)
+    stylename = 'css/pygments/{}.css'.format(
+            flask.request.args.get('style', 'tango'))
+    return flask.render_template('source_code.html', html=html,
+                                 stylename=stylename)
 
 
-# setup syslog looger
-if not app.debug:
-    logger = logging.getLogger('root')
-    logger.setLevel(logging.DEBUG)
-    if os.sys.platform == 'darwin':
-        handler = logging.handlers.SysLogHandler(address='/var/run/syslog')
-    else:
-        handler = logging.handlers.SysLogHandler(address='/dev/log')
-    formatter = logging.Formatter(
-            'bytebin.%(name)s %(asctime)s %(levelname)8s - %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+@app.route("/<key>", methods=["DELETE"])
+def paste_delete(key):
+    try:
+        paste = Paste.find(key)
+        paste.delete()
+    except Paste.NotFound:
+        flask.abort(404)
+    return "Successfully deleted", 204
+
+
+@app.errorhandler(404)
+def page_not_found(e):
+    return "Page not found", 404
 
 
 if __name__ == "__main__":
