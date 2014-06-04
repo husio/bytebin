@@ -1,4 +1,3 @@
-import difflib
 import os
 
 import flask
@@ -57,28 +56,6 @@ def pate_create():
         return flask.Response(url, content_type='text/plain; charset=utf-8')
 
     return flask.redirect(flask.url_for('.paste_show', key=paste.key))
-
-
-@app.route("/<key_1>/diff/<key_2>", methods=["GET"])
-def paste_diff(key_1, key_2):
-    keys = [key_1, key_2]
-    values = app.redis.mget([key_1, key_2])
-    for key, value in zip(keys, values):
-        if not value:
-            return "Value is missing: {}".format(key), 404
-    values = [v.decode('utf8').split('\n') for v in values]
-    diff = difflib.unified_diff(*values)
-    content = "\n".join(diff)
-    if False:
-        return flask.Response(content, content_type='text/plain; charset=utf-8')
-
-    lexer = get_lexer_by_name('diff', stripall=True)
-    formatter = HtmlFormatter(linenos=False, cssclass="source")
-    html = highlight(content, lexer, formatter)
-    stylename = 'css/pygments/{}.css'.format(
-            flask.request.args.get('style', 'tango'))
-    return flask.render_template('source_code.html', html=html,
-                                 stylename=stylename)
 
 
 @app.route("/<key>", methods=["GET"])
