@@ -51,11 +51,7 @@ def pate_create():
 
 @app.route("/<key>", methods=["GET"])
 def paste_show(key):
-    try:
-        paste = Paste.find(key)
-    except Paste.NotFound:
-        flask.abort(404)
-
+    paste = Paste.find(key)
     lexer_name = flask.request.args.get('lang', None)
     if not lexer_name:
         return flask.Response(paste.content,
@@ -78,11 +74,8 @@ def paste_show(key):
 
 @app.route("/<key>", methods=["DELETE"])
 def paste_delete(key):
-    try:
-        paste = Paste.find(key)
-        paste.delete()
-    except Paste.NotFound:
-        flask.abort(404)
+    paste = Paste.find(key)
+    paste.delete()
     return "Successfully deleted", 204
 
 
