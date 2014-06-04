@@ -1,19 +1,13 @@
-import os
-
 import flask
-from redis import Redis
 import pygments
 from pygments import highlight
 from pygments.formatters import HtmlFormatter
 from pygments.lexers import get_lexer_by_name
 
-from models import Paste
+from bytebin.models import Paste
 
 
-app = flask.Flask(__name__)
-app.debug = bool(os.getenv('DEBUG', False))
-redis = Redis(db=int(os.getenv('REDIS_DATABSE', 3)))
-Paste.set_connection(redis)
+app = flask.Blueprint('bytebin.view.paste', __name__)
 
 
 @app.route("/", methods=["GET"])
@@ -45,9 +39,6 @@ def pate_create():
 
     paste = Paste(content=content)
     paste.save(timeout)
-
-    app.logger.info('page created by %s, size %s', flask.request.remote_addr,
-                    len(paste.content))
 
     # context negotiation does not work well here
     user_agent = flask.request.headers.get('user-agent')
@@ -93,11 +84,6 @@ def paste_delete(key):
     except Paste.NotFound:
         flask.abort(404)
     return "Successfully deleted", 204
-
-
-@app.errorhandler(404)
-def page_not_found(e):
-    return "Page not found", 404
 
 
 if __name__ == "__main__":
