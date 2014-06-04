@@ -27,7 +27,7 @@ def pate_create():
         flask.abort(400)
 
     try:
-        timeout = int(flask.request.form.get('timeout', 60))
+        timeout = int(flask.request.form.get('timeout', 60 * 60))
     except (ValueError, TypeError):
         return 'invalid "timeout" value', 400
     if timeout < 1:
