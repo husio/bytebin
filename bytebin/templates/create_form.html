@@ -2,14 +2,7 @@
 
 
 {% block head -%}
-<style type="text/css">
-    html, body  { margin: 0; padding: 5px; }
-    textarea    { margin: 0; padding: 10px; border: none; min-height: 500px; width: 100%; box-sizing: border-box; }
-    a           { color: #498AD1; text-decoration: none; }
-    a:hover     { color: #BC241F; }
-    .hidden     { display: none; }
-    .right      { text-align: right; }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}" type="text/css">
 {%- endblock %}
 
 
@@ -20,11 +13,12 @@
             <label>
                 Delete after
                 <select name="timeout" required>
-                    <option value="300">5 minutes</option>
-                    <option value="1800">30 minutes</option>
-                    <option value="3600" selected>1 hour</option>
-                    <option value="7200">2 hours</option>
-                    <option value="86400">1 day</option>
+                    <option value="{{ 60 * 5 }}">5 minutes</option>
+                    <option value="{{ 60 * 30 }}">30 minutes</option>
+                    <option value="{{ 60 * 60 }}">1 hour</option>
+                    <option value="{{ 60 * 60 * 2}}" selected>2 hours</option>
+                    <option value="{{ 60 * 60 * 24 }}">1 day</option>
+                    <option value="{{ 60 * 60 * 24 * 2 }}">2 days</option>
                 </select>
             </label>
             <button type="submit"> Submit </button>
