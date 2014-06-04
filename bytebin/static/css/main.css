@@ -1,0 +1,6 @@
+html, body  { margin: 0; padding: 5px; }
+textarea    { margin: 0; padding: 10px; border: none; min-height: 500px; width: 100%; box-sizing: border-box; }
+a           { color: #498AD1; text-decoration: none; }
+a:hover     { color: #BC241F; }
+.hidden     { display: none; }
+.right      { text-align: right; }

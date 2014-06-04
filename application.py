@@ -15,6 +15,7 @@ def create_app():
     app = flask.Flask(__name__)
     app.debug = bool(os.getenv('DEBUG', False))
     app.template_folder = os.path.join(PROJECT_DIR, 'templates')
+    app.static_folder = os.path.join(PROJECT_DIR, 'static')
 
     redis = Redis(db=int(os.getenv('REDIS_DATABSE', 3)))
     models.Paste.set_connection(redis)
