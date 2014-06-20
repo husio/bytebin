@@ -59,6 +59,9 @@ def paste_show(key):
         else:
             lexer = guess_lexer(paste.content)
     except pygments.util.ClassNotFound:
+        lexer_name = 'raw'
+
+    if lexer_name == 'raw':
         return flask.Response(paste.content,
                               content_type='text/plain; charset=utf-8')
 
