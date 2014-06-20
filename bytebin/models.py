@@ -20,13 +20,14 @@ class RedisModel:
 
     @classmethod
     def find(cls, key):
-        attrs = cls._redis_connection.hgetall(key)
-        if not attrs:
+        pairs = cls._redis_connection.hgetall(key)
+        if not pairs:
             raise cls.NotFound(key)
-        return cls(key=key, **attrs)
+        attrs = {k.decode('utf8'): v.decode('utf8') for (k, v) in pairs.items()}
+        return cls(**attrs)
 
-    def __init__(self, key=None, **kwargs):
-        self.key = key
+    def __init__(self, **kwargs):
+        kwargs.setdefault('key', None)
         self.__dict__.update(**kwargs)
 
     def save(self, timeout=60 * 60):

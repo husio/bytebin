@@ -7,5 +7,9 @@
         <pre>
             <code>cat &lt;file&gt; | curl -F 'content=&lt;-' http://{{ request.host }}</code>
         </pre>
+        It's possible to set more properties:
+        <pre>
+            <code>cat &lt;file.json&gt; | curl -F 'timeout=6000' -F 'lang=json' -F 'one_use=on' -F 'content=<-' http://{{ request.host }}</code>
+        </pre>
     </p>
 {%- endblock %}

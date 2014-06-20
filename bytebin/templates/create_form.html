@@ -10,6 +10,13 @@
     <form action="/" method="POST" accept-charset="utf-8">
         <textarea name="content" placeholder="Content..." autofocus required></textarea>
         <div class="right">
+            <div>
+                <label>
+                    One use only
+                    <input name="one_use" type="checkbox">
+                    <small>(if selected, after reading, paste will be deleted)</small>
+                </label>
+            </div>
             <label>
                 Delete after
                 <select name="timeout" required>
@@ -19,6 +26,15 @@
                     <option value="{{ 60 * 60 * 2}}" selected>2 hours</option>
                     <option value="{{ 60 * 60 * 24 }}">1 day</option>
                     <option value="{{ 60 * 60 * 24 * 2 }}">2 days</option>
+                </select>
+            </label>
+            <label>
+                Language
+                <select name="lang">
+                    <option value=""> --- </option>
+                    {% for name, codename in lexers.items() %}
+                        <option value="{{ codename }}">{{ name }}</option>
+                    {% endfor %}
                 </select>
             </label>
             <button type="submit"> Submit </button>
