@@ -21,7 +21,7 @@ def help():
 
 
 @app.route("/", methods=["POST"])
-def pate_create():
+def paste_create():
     content = flask.request.form.get('content', None)
     if not content:
         flask.abort(400)
