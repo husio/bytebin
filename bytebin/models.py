@@ -18,18 +18,16 @@ class RedisModel:
             raise ConfigurationError('Connection already set')
         cls._redis_connection = redis_connection
 
-
-class Paste(RedisModel):
-    def __init__(self, content, key=None):
-        self.content = content
-        self.key = key
-
     @classmethod
     def find(cls, key):
-        content = cls._redis_connection.get(key)
-        if content is None:
+        attrs = cls._redis_connection.hgetall(key)
+        if not attrs:
             raise cls.NotFound(key)
-        return cls(content=content, key=key)
+        return cls(key=key, **attrs)
+
+    def __init__(self, key=None, **kwargs):
+        self.key = key
+        self.__dict__.update(**kwargs)
 
     def save(self, timeout=60 * 60):
         """Save paste in database
@@ -37,18 +35,21 @@ class Paste(RedisModel):
         If paste has key assigned, paste will be updated only if already stored
         in database. Otherwise, unique key will be generated.
         """
-        r = self._redis_connection
+        rd = self._redis_connection
 
-        if self.key:
-            if not r.set(self.key, self.content, xx=True):
-                raise self.NotFound("not stored")
-
-        while True:
-            key = str(uuid.uuid4())
-            if r.set(key, self.content, nx=True, ex=timeout):
-                self.key = key
-                break
+        if not self.key:
+            self.key = str(uuid.uuid4())
+        for name, value in self.__dict__.items():
+            if name.startswith('_'):
+                continue
+            rd.hset(self.key, name, getattr(self, name))
+        rd.hset(self.key, '_type', type(self).__name__)
+        rd.expire(self.key, timeout)
         return self
+
+    def to_json(self):
+        properties = self.__dict__.items()
+        return dict({k:v for (k, v) in properties if not k.startswith('_')})
 
     def delete(self):
         """Delete paste from database.
@@ -62,3 +63,7 @@ class Paste(RedisModel):
             raise self.NotFound("not stored")
         self.key = None
         return self
+
+
+class Paste(RedisModel):
+    pass
