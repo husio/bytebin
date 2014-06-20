@@ -2,7 +2,7 @@ import flask
 import pygments
 from pygments import highlight
 from pygments.formatters import HtmlFormatter
-from pygments.lexers import get_lexer_by_name
+from pygments.lexers import get_lexer_by_name, guess_lexer
 
 from bytebin.models import Paste
 
@@ -53,18 +53,19 @@ def paste_create():
 def paste_show(key):
     paste = Paste.find(key)
     lexer_name = flask.request.args.get('lang', None)
-    if not lexer_name:
+    try:
+        if lexer_name:
+            lexer = get_lexer_by_name(lexer_name, stripall=True)
+        else:
+            lexer = guess_lexer(paste.content)
+    except pygments.util.ClassNotFound:
         return flask.Response(paste.content,
                               content_type='text/plain; charset=utf-8')
 
-    try:
-        lexer = get_lexer_by_name(lexer_name, stripall=True)
-    except pygments.util.ClassNotFound:
-        return 'language "{}" not supported'.format(lexer_name), 400
-
     with_lines = 'lineno' in flask.request.args
 
-    if lexer_name == 'json':
+    # JSON is detected as C by default. So this does not work on autodetection
+    if lexer.name == 'JSON':
         paste.to_json()
 
     formatter = HtmlFormatter(linenos=with_lines, cssclass="source")
