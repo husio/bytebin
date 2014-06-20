@@ -1,3 +1,4 @@
+import json
 import uuid
 
 
@@ -62,3 +63,12 @@ class Paste(RedisModel):
             raise self.NotFound("not stored")
         self.key = None
         return self
+
+    def to_json(self):
+        content = self.content
+        try:
+            obj = json.loads(content)
+            self.content = json.dumps(obj, indent=4, sort_keys=True)
+        except Exception:
+            self.content = content
+

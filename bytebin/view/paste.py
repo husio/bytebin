@@ -64,6 +64,9 @@ def paste_show(key):
 
     with_lines = 'lineno' in flask.request.args
 
+    if lexer_name == 'json':
+        paste.to_json()
+
     formatter = HtmlFormatter(linenos=with_lines, cssclass="source")
     html = highlight(paste.content, lexer, formatter)
     stylename = 'css/pygments/{}.css'.format(
